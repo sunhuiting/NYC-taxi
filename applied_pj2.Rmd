@@ -1,0 +1,269 @@
+---
+title: "applied_pj2"
+author: "Huiting Sun"
+date: "08/09/2019"
+output: word_document
+---
+
+```{r}
+setwd("/Users/apple/Desktop/Applied DS/project2")
+mydata = read.csv("new_cleased_2018_05.csv")
+```
+
+```{r}
+mydata$PULocationID <- as.factor(mydata$PULocationID)
+mydata$DOLocationID <- as.factor(mydata$DOLocationID)
+```
+
+```{r}
+nrow(mydata)
+```
+
+```{r}
+library(dplyr) 
+subsample <- sample_n(mydata, size=nrow(mydata)*0.3)
+```
+
+```{r}
+lookup <- read.csv("taxi+_zone_lookup.csv")
+mydata$borough <- lookup$Borough[mydata$PULocationID]
+```
+
+```{r}
+lookup <- read.csv("taxi+_zone_lookup.csv")
+subsample$borough <- lookup$Borough[subsample$PULocationID]
+```
+
+```{r}
+str(mydata)
+```
+
+```{r}
+colnames(mydata)
+```
+
+
+```{r}
+lookup <- read.csv("taxi+_zone_lookup.csv")
+mydata$drop_borough <- lookup$Borough[mydata$DOLocationID]
+```
+
+
+```{r}
+library(dplyr)
+
+#subsample %>% filter(fare_amount=="52")
+#data_pair$DOborough <- lookup$Borough[data_pair$DOLocationID]
+#data_pair$PUborough <- lookup$Borough[data_pair$PULocationID]
+
+airport <- mydata[(((mydata$drop_borough == 'Queens') & (mydata$borough == 'Manhattan')) | (mydata$drop_borough == 'Manhattan') & (mydata$borough == 'Queens')) & (mydata$fare_amount == 52),] %>% select(fare_amount, borough, drop_borough)  
+
+nrow(airport)
+
+#subsample %>% filter(borough=="Manhattan") %>% filter(drop_borough=="Queens") %>% select(fare_amount) 
+```
+
+```{r}
+library(dplyr)
+subsample_1 <- subsample %>% filter((duration < 100) & (duration >= 0))
+subsample_1
+#dat_fit$duration <- dat_fit %>% filter(duration < 100)  %>% filter(duration > 0)
+#mydata$duration <- mydata %>% filter(duration < 100)  %>% filter(duration > 0)
+```
+
+```{r}
+pairs(fare_amount ~ duration + trip_distance + tip_amount, subsample_1)
+```
+
+```{r}
+library(dplyr)
+#summary(as.factor(mydata$payment_type))
+dat_fit <- subsample %>% filter(payment_type==1) 
+pairs(log(fare_amount) ~ log(duration) + log(trip_distance) + log(tip_amount), subsample_1)
+```
+
+```{r}
+cor(log(subsample_1$fare_amount), log(subsample_1$trip_distance), method = "pearson")
+```
+
+```{r}
+cor(log(subsample_1$fare_amount), log(subsample_1$duration+0.1), method = "pearson")
+```
+
+```{r}
+cor(log(subsample_1$duration+0.1), log(subsample_1$trip_distance))
+```
+
+```{r}
+dat_fit <- subsample_1 %>% mutate(VendorID = VendorID==1)
+cont_mod <- lm(fare_amount ~ duration + trip_distance + tip_amount + VendorID, data=subsample_1)
+summary(cont_mod)
+```
+
+```{R}
+step(cont_mod, scope = ~.)
+```
+
+```{R}
+dat_fit <- subsample_1 %>% mutate(VendorID = VendorID==1)
+cont_mod <- lm(fare_amount ~ duration + trip_distance + tip_amount, data=dat_fit)
+summary(cont_mod)
+```
+
+
+```{R}
+step(cont_mod, scope = ~.)
+```
+
+
+
+
+```{r}
+sample_mod <- lm(fare_amount~weather+hour_interval+borough+trip_distance+, data=subsample)
+summary(sample_mod)
+```
+
+```{R}
+step(sample_mod, scope = ~.)
+```
+
+```{r}
+plot(sample_mod)
+```
+
+```{r}
+#"VendorID"         "passenger_count"  "trip_distance"   
+# [6] "RatecodeID"       "PULocationID"        "fare_amount"     
+#[11] "extra"            "tip_amount"       "total_amount"            
+#[16] "day"              "weekday"         "duration"         "weather"         
+#[21]   "hour_interval"    "borough"         
+
+
+sample_mod2 <- lm(fare_amount~VendorID+RatecodeID+extra+passenger_count+weather+hour_interval+borough+trip_distance, data=subsample)
+summary(sample_mod2)
+```
+
+```{R}
+step(sample_mod2, scope = ~.)
+```
+
+
+```{r}
+plot(sample_mod2)
+```
+
+
+```{r} 
+library(nnet)
+mod <- multinom(borough ~  weather, subsample)
+```
+
+```{r}
+summary(mod)
+```
+
+
+
+```{r}
+## Descriptive statistics
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Fare amount
+```{r} 
+fare <- mydata[,10]
+#cor(fare, trip_dis)
+plot(x = trip_dis[1:200], y = fare[1:200], xlim = c(0,15), ylim = c(0,50),
+     xlab = "distance", ylab = "fare", main="first 200 obs", col="orange")
+```
+
+
+
+```{r}
+hist(fare, xlim = c(0,60), breaks = 50,
+     xlab = "fare amount",
+     main = "Histogram of fare amount",
+     col = "purple")
+```
+
+# Fit model
+```{r}
+# fare amount with hour
+interaction.plot(mydata$day, mydata$borough, mydata$fare_amount, type = "b", col = 1:7)
+```
+
+```{r}
+levels(mydata$hour_interval)
+```
+
+
+```{r}
+scale(mydata$weather_code, center = TRUE, scale = TRUE)
+```
+
+
+```{r}
+# fare amount with weather
+interaction.plot(mydata$weather, mydata$borough, mydata$fare_amount, type = "b", col = 1:7)
+```
+
+
+```{r}
+# fare amount with weather
+interaction.plot(mydata$hour_interval, mydata$borough, mydata$fare_amount, type = "b", col = 1:7)
+```
+
+```{r}
+# fare amount with weather
+interaction.plot(subsample$hour_interval, subsample$borough, subsample$fare_amount, type = "b", col = 1:7)
+```
+
+
+
+
+
+```{r}
+# hour interval
+matplot(prop.table(table(mydata$hour_interval, mydata$borough), 1), type="o")
+```
+
+```{r}
+table(mydata$hour_interval, mydata$borough)
+```
+
+
+
+
+```{r}
+# hour interval
+matplot(prop.table(table(mydata$hour, mydata$borough), 1), type="o")
+```
+
+```{r}
+table(mydata$hour, mydata$borough)
+```
+
+```{r}
+table(mydata$hour, mydata$borough)
+```
+
+```{r}
+matplot(prop.table(table(mydata$weather, mydata$borough), 1), type="o")
+```
+
+```{r}
+table(mydata$weather, mydata$borough)
+```
+
+```{r}
+matplot(prop.table(table(mydata$passenger_count, mydata$borough), 1), type="o")
+```
+
+```{R}
+table(mydata$passenger_count, mydata$borough)
+```
+
+
+
+
+
